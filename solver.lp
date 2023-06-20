@@ -1,4 +1,3 @@
-
 % every case must be assigned to one referee
 { assign(CID, RID) : referee(RID, _, _, _, _) } = 1 :- case(CID, _, _, _, _, _).
 
@@ -22,7 +21,18 @@
 
 % WEAK CONSTRAINTS
 % Internal referees are preferred in order to minimize the costs of external ones.
-:~ assign(CID, RID), case(CID, _, _, _, _, _), referee(RID, e, _, _, _). [1@3]
+:~ assign(CID, RID), case(CID, _, _, _, _, _), referee(RID, e, _, _, _). [1@5]
+
+% The assignment of cases to external referees should be fair in the sense that
+% their overall payment should be balanced (i.e., they should all have the chance to
+% handle cases such that their overall payments are similar).
+total_payment(RID, TOTAL) :- referee(RID, _, _, _, _), #sum { P, C, R: assign(C, R), case(C, _, _, _, _, P), referee(R, _, _, _, _), R==RID } = TOTAL. 
+:~ assign(CID, RID), case(CID, _, _, _, _, _), referee(RID, e, _, _, TOTAL_PAY), total_payment(RID, TOTAL), N = TOTAL + TOTAL_PAY. [N@4]
+
+% The assignment of cases to (internal and external) referees should be fair in the
+% sense that their overall workload should be balanced.
+total_workload(RID, TOTAL) :- referee(RID, _, _, _, _), #sum { H, C, R: assign(C, R), case(C, _, H, _, _, _), referee(R, _, _, _, _), R==RID } = TOTAL. 
+:~ assign(CID, RID), case(CID, _, _, _, _, _), referee(RID, _, _, PREV_WORKLOAD, _), total_workload(RID, TOTAL), N = TOTAL + PREV_WORKLOAD. [N@3]
 
 % Referees should handle types of cases with higher preference.
 :~ assign(CID, RID), case(CID, CASET, _, _, _, _), referee(RID, _, _, _, _), prefType(RID, CASET, PREF). [-PREF@2]
